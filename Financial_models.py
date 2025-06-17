@@ -117,236 +117,228 @@ def monte_carlo_stock_price_simulation(S0, mu, sigma, num_days, dt, num_simulati
     return all_sim_paths_data
 
 
-tab1, tab2 = st.tabs(["Monte Carlo Simulation", "Black-Scholes pricing Model"])
+st.header("Real-Time Monte Carlo Stock Price Simulation")
 
-with tab1:
-    st.header("Real-Time Monte Carlo Stock Price Simulation")
+st.write("""
+This application simulates potential future stock price paths using the Monte Carlo method
+and the Geometric Brownian Motion model. Adjust the parameters below to influence
+the stock's projected movements and watch the paths render in real-time.
+""")
 
-    st.write("""
-    This application simulates potential future stock price paths using the Monte Carlo method
-    and the Geometric Brownian Motion model. Adjust the parameters below to influence
-    the stock's projected movements and watch the paths render in real-time.
-    """)
+st.subheader("Simulation Parameters")
 
-    st.subheader("Simulation Parameters")
+col_left, col_right = st.columns([0.5, 0.5])
 
-    col_left, col_right = st.columns([0.5, 0.5])
+with col_left:
+    S0 = st.number_input("Initial Stock Price ($S_0$)", value=100.00, min_value=0.01, format="%.2f",
+                            help="The starting price of the stock.")
+    mu = st.number_input("Annualized Expected Return ($\mu$)", value=0.08, format="%.4f",
+                            help="The average annual return of the stock (e.g., 0.1 for 10%).")
+    sigma = st.number_input("Annualized Volatility ($\sigma$)", value=0.60, min_value=0.001, format="%.4f",
+                                help="The degree of variation of a trading price series over time (e.6 for 60%).")
+    dt_option = st.selectbox(
+        "Time Step Frequency ($\Delta t$)",
+        options=['Daily (1/252)', 'Weekly (1/52)', 'Monthly (1/12)'],
+        index=0,
+        help="The frequency of price changes in the simulation. 252 trading days in a year is standard."
+    )
+    dt_map = {
+        'Daily (1/252)': 1/252,
+        'Weekly (1/52)': 1/52,
+        'Monthly (1/12)': 1/12
+    }
+    st.info(f"Using $\Delta t$ = **{dt_map[dt_option]:.4f}** based on '{dt_option}' for calculations.")
+    dt = dt_map[dt_option]
 
-    with col_left:
-        S0 = st.number_input("Initial Stock Price ($S_0$)", value=100.00, min_value=0.01, format="%.2f",
-                             help="The starting price of the stock.")
-        mu = st.number_input("Annualized Expected Return ($\mu$)", value=0.08, format="%.4f",
-                             help="The average annual return of the stock (e.g., 0.1 for 10%).")
-        sigma = st.number_input("Annualized Volatility ($\sigma$)", value=0.60, min_value=0.001, format="%.4f",
-                                 help="The degree of variation of a trading price series over time (e.6 for 60%).")
-        dt_option = st.selectbox(
-            "Time Step Frequency ($\Delta t$)",
-            options=['Daily (1/252)', 'Weekly (1/52)', 'Monthly (1/12)'],
-            index=0,
-            help="The frequency of price changes in the simulation. 252 trading days in a year is standard."
-        )
-        dt_map = {
-            'Daily (1/252)': 1/252,
-            'Weekly (1/52)': 1/52,
-            'Monthly (1/12)': 1/12
-        }
-        st.info(f"Using $\Delta t$ = **{dt_map[dt_option]:.4f}** based on '{dt_option}' for calculations.")
-        dt = dt_map[dt_option]
-
-    with col_right:
-        num_days = st.slider("Number of Days to Project", 30, 730, 50, 1,
-                             help="The total number of days into the future for the simulation.")
-        num_simulations = st.slider("Number of Simulations (Paths)", 100, 3000, 1000, 100,
-                                     help="The total number of independent price paths to generate.")
-        update_frequency = st.slider("Update Plot Every (N) Paths", 1, min(num_simulations, 200), 10, 1,
-                                     help="Controls how often the 'Simulated Price Paths' plot updates during simulation. Lower values provide more frequent visual updates but can slightly slow down very large simulations.")
+with col_right:
+    num_days = st.slider("Number of Days to Project", 30, 730, 50, 1,
+                            help="The total number of days into the future for the simulation.")
+    num_simulations = st.slider("Number of Simulations (Paths)", 100, 3000, 1000, 100,
+                                    help="The total number of independent price paths to generate.")
+    update_frequency = st.slider("Update Plot Every (N) Paths", 1, min(num_simulations, 200), 10, 1,
+                                    help="Controls how often the 'Simulated Price Paths' plot updates during simulation. Lower values provide more frequent visual updates but can slightly slow down very large simulations.")
 
 
-    st.markdown("---")
+st.markdown("---")
 
-    if 'run_clicked' not in st.session_state:
+if 'run_clicked' not in st.session_state:
+    st.session_state.run_clicked = False
+
+start_simulation = st.button("Run Simulation")
+
+if start_simulation:
+    st.session_state.run_clicked = True
+
+if st.session_state.run_clicked:
+    if sigma <= 0.001:
+        st.error("Please ensure Annualized Volatility (sigma) is greater than 0.001 to run the simulation.")
         st.session_state.run_clicked = False
+    else:
+        st.subheader("Simulated Price Paths (Real-time update)")
+        progress_bar_placeholder = st.empty()
+        plot_placeholder = st.empty()
 
-    start_simulation = st.button("Run Simulation")
+        with st.spinner("Generating simulation paths... Please wait."):
+            all_sim_paths_data = monte_carlo_stock_price_simulation(S0, mu, sigma, num_days, dt, num_simulations, plot_placeholder, progress_bar_placeholder, update_frequency)
 
-    if start_simulation:
-        st.session_state.run_clicked = True
+        progress_bar_placeholder.empty()
+        st.success("Simulation complete!")
 
-    if st.session_state.run_clicked:
-        if sigma <= 0.001:
-            st.error("Please ensure Annualized Volatility (sigma) is greater than 0.001 to run the simulation.")
-            st.session_state.run_clicked = False
-        else:
-            st.subheader("Simulated Price Paths (Real-time update)")
-            progress_bar_placeholder = st.empty()
-            plot_placeholder = st.empty()
-
-            with st.spinner("Generating simulation paths... Please wait."):
-                all_sim_paths_data = monte_carlo_stock_price_simulation(S0, mu, sigma, num_days, dt, num_simulations, plot_placeholder, progress_bar_placeholder, update_frequency)
-
-            progress_bar_placeholder.empty()
-            st.success("Simulation complete!")
-
-            with plot_placeholder:
-                all_sim_paths_array = np.array(all_sim_paths_data).T
-                final_fig_combined = go.Figure(layout=go.Layout(
-                    title='Simulated Stock Price Paths with Mean and Confidence Intervals',
-                    xaxis_title='Days',
-                    yaxis_title='Simulated Price',
-                    height=600,
-                    showlegend=True,
-                    template="plotly_dark",
-                    hovermode="x unified",
-                    margin=dict(l=40, r=40, t=60, b=40),
-                    font=dict(size=12)
-                ))
-
-                mean_final_price = np.mean(all_sim_paths_array[-1, :])
-
-                for sim_idx in range(all_sim_paths_array.shape[1]):
-                    path_color = 'rgba(0, 255, 0, 0.1)' if all_sim_paths_array[-1, sim_idx] > mean_final_price else 'rgba(255, 0, 0, 0.1)'
-                    final_fig_combined.add_trace(go.Scatter(
-                        x=np.arange(all_sim_paths_array.shape[0]),
-                        y=all_sim_paths_array[:, sim_idx],
-                        mode='lines',
-                        line=dict(color=path_color, width=1),
-                        name=f'Path {sim_idx+1}',
-                        showlegend=False,
-                        hoverinfo='skip'
-                    ))
-
-                mean_path = np.mean(all_sim_paths_array, axis=1)
-                final_fig_combined.add_trace(go.Scatter(
-                    x=np.arange(len(mean_path)),
-                    y=mean_path,
-                    mode='lines',
-                    line=dict(color='yellow', width=3, dash='dot'),
-                    name='Mean Path',
-                    showlegend=True
-                ))
-
-                percentile_5th = np.percentile(all_sim_paths_array, 5, axis=1)
-                percentile_95th = np.percentile(all_sim_paths_array, 95, axis=1)
-
-                final_fig_combined.add_trace(go.Scatter(
-                    x=np.arange(len(percentile_95th)),
-                    y=percentile_95th,
-                    mode='lines',
-                    line=dict(color='red', width=1, dash='dash'),
-                    name='95th Percentile',
-                    showlegend=True
-                ))
-                final_fig_combined.add_trace(go.Scatter(
-                    x=np.arange(len(percentile_5th)),
-                    y=percentile_5th,
-                    mode='lines',
-                    line=dict(color='lime', width=1, dash='dash'),
-                    name='5th Percentile',
-                    showlegend=True
-                ))
-
-                min_val_final = np.min(all_sim_paths_array)
-                max_val_final = np.max(all_sim_paths_array)
-                final_fig_combined.update_yaxes(range=[min_val_final * 0.95, max_val_final * 1.05])
-
-                st.plotly_chart(final_fig_combined, use_container_width=True)
-
-            st.markdown("---")
-            st.header("Simulation Results Summary")
-
-            col1, col2, col3 = st.columns(3)
-            final_prices = all_sim_paths_array[-1, :]
-
-            with col1:
-                st.metric(label="Mean Final Price", value=f"₹{np.mean(final_prices):.2f}")
-                st.metric(label="Median Final Price", value=f"₹{np.median(final_prices):.2f}")
-            with col2:
-                st.metric(label="Standard Deviation", value=f"₹{np.std(final_prices):.2f}")
-                st.metric(label="Min Final Price", value=f"₹{np.min(final_prices):.2f}")
-            with col3:
-                st.metric(label="Max Final Price", value=f"₹{np.max(final_prices):.2f}")
-                st.metric(label="5th Percentile (VaR)", value=f"₹{np.percentile(final_prices, 5):.2f}")
-                st.metric(label="95th Percentile", value=f"₹{np.percentile(final_prices, 95):.2f}")
-
-            st.write("")
-
-            st.header("Distribution of Final Prices")
-
-            hist_fig = go.Figure()
-            counts, bins = np.histogram(final_prices, bins=50)
-
-            hist_fig.add_trace(go.Bar(
-                x=bins, y=counts,
-                marker_color='skyblue',
-                name='Frequency',
-                showlegend=False
-            ))
-
-            for i in range(len(counts)):
-                if counts[i] > 0:
-                    hist_fig.add_annotation(
-                        x=(bins[i] + bins[i+1]) / 2,
-                        y=counts[i],
-                        text=str(counts[i]),
-                        yshift=15,
-                        xanchor='center',
-                        yanchor='bottom',
-                        showarrow=False,
-                        font=dict(color="white", size=14)
-                    )
-
-            hist_fig.update_layout(
-                title='Distribution of Final Prices',
-                xaxis_title='Final Price (₹)',
-                yaxis_title='Frequency',
-                bargap=0.1,
+        with plot_placeholder:
+            all_sim_paths_array = np.array(all_sim_paths_data).T
+            final_fig_combined = go.Figure(layout=go.Layout(
+                title='Simulated Stock Price Paths with Mean and Confidence Intervals',
+                xaxis_title='Days',
+                yaxis_title='Simulated Price',
+                height=600,
+                showlegend=True,
                 template="plotly_dark",
+                hovermode="x unified",
                 margin=dict(l=40, r=40, t=60, b=40),
                 font=dict(size=12)
-            )
-            st.plotly_chart(hist_fig, use_container_width=True)
+            ))
 
-            st.markdown("---")
-            st.header("Explore Simulated Data")
+            mean_final_price = np.mean(all_sim_paths_array[-1, :])
 
-            st.markdown("#### Final Prices of All Simulated Paths")
-            df_final_prices = pd.DataFrame(final_prices, columns=['Final Price (₹)'])
-            df_final_prices.index.name = 'Path Index'
-            st.dataframe(df_final_prices.style.format({"Final Price (₹)": "₹{:.2f}"}), use_container_width=True, height=250)
+            for sim_idx in range(all_sim_paths_array.shape[1]):
+                path_color = 'rgba(0, 255, 0, 0.1)' if all_sim_paths_array[-1, sim_idx] > mean_final_price else 'rgba(255, 0, 0, 0.1)'
+                final_fig_combined.add_trace(go.Scatter(
+                    x=np.arange(all_sim_paths_array.shape[0]),
+                    y=all_sim_paths_array[:, sim_idx],
+                    mode='lines',
+                    line=dict(color=path_color, width=1),
+                    name=f'Path {sim_idx+1}',
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
 
-            st.markdown("---")
-            st.header("Download Simulation Data")
-            df_sim_paths = pd.DataFrame(all_sim_paths_array, columns=[f'Sim_{i+1}' for i in range(num_simulations)])
-            df_sim_paths.index.name = 'Day'
-            csv_data = df_sim_paths.to_csv(index=True).encode('utf-8')
-            st.download_button(
-                label="Download All Simulated Paths as CSV",
-                data=csv_data,
-                file_name="monte_carlo_stock_paths.csv",
-                mime="text/csv",
-                help="Download a CSV file containing all simulated stock price paths."
-            )
-    else:
-        st.info("Adjust the parameters above and click 'Run Simulation' to see the results.")
+            mean_path = np.mean(all_sim_paths_array, axis=1)
+            final_fig_combined.add_trace(go.Scatter(
+                x=np.arange(len(mean_path)),
+                y=mean_path,
+                mode='lines',
+                line=dict(color='yellow', width=3, dash='dot'),
+                name='Mean Path',
+                showlegend=True
+            ))
 
-    st.markdown("---")
-    st.header("About the Model")
-    st.info(
-        """
-        This simulation uses **Geometric Brownian Motion (GBM)** to model stock prices.
-        The formula is:
-        $S_{t+\Delta t} = S_t \\cdot e^{(\\mu - \\frac{1}{2}\\sigma^2)\\Delta t + \\sigma\\sqrt{\\Delta t}Z}$
+            percentile_5th = np.percentile(all_sim_paths_array, 5, axis=1)
+            percentile_95th = np.percentile(all_sim_paths_array, 95, axis=1)
 
-        **Assumptions of GBM:**
-        1. Stock prices follow a random walk.
-        2. Log returns are normally distributed.
-        3. Volatility is constant over time.
-        4. No dividends or transaction costs.
-        """
-    )
-    st.caption("Built with Streamlit and Plotly")
+            final_fig_combined.add_trace(go.Scatter(
+                x=np.arange(len(percentile_95th)),
+                y=percentile_95th,
+                mode='lines',
+                line=dict(color='red', width=1, dash='dash'),
+                name='95th Percentile',
+                showlegend=True
+            ))
+            final_fig_combined.add_trace(go.Scatter(
+                x=np.arange(len(percentile_5th)),
+                y=percentile_5th,
+                mode='lines',
+                line=dict(color='lime', width=1, dash='dash'),
+                name='5th Percentile',
+                showlegend=True
+            ))
 
+            min_val_final = np.min(all_sim_paths_array)
+            max_val_final = np.max(all_sim_paths_array)
+            final_fig_combined.update_yaxes(range=[min_val_final * 0.95, max_val_final * 1.05])
 
-with tab2:
-    st.header("Black-Scholes Pricing Model")
-    st.write("This section will contain the Black-Scholes pricing model for options.")
+            st.plotly_chart(final_fig_combined, use_container_width=True)
+
+        st.markdown("---")
+        st.header("Simulation Results Summary")
+
+        col1, col2, col3 = st.columns(3)
+        final_prices = all_sim_paths_array[-1, :]
+
+        with col1:
+            st.metric(label="Mean Final Price", value=f"₹{np.mean(final_prices):.2f}")
+            st.metric(label="Median Final Price", value=f"₹{np.median(final_prices):.2f}")
+        with col2:
+            st.metric(label="Standard Deviation", value=f"₹{np.std(final_prices):.2f}")
+            st.metric(label="Min Final Price", value=f"₹{np.min(final_prices):.2f}")
+        with col3:
+            st.metric(label="Max Final Price", value=f"₹{np.max(final_prices):.2f}")
+            st.metric(label="5th Percentile (VaR)", value=f"₹{np.percentile(final_prices, 5):.2f}")
+            st.metric(label="95th Percentile", value=f"₹{np.percentile(final_prices, 95):.2f}")
+
+        st.write("")
+
+        st.header("Distribution of Final Prices")
+
+        hist_fig = go.Figure()
+        counts, bins = np.histogram(final_prices, bins=50)
+
+        hist_fig.add_trace(go.Bar(
+            x=bins, y=counts,
+            marker_color='skyblue',
+            name='Frequency',
+            showlegend=False
+        ))
+
+        for i in range(len(counts)):
+            if counts[i] > 0:
+                hist_fig.add_annotation(
+                    x=(bins[i] + bins[i+1]) / 2,
+                    y=counts[i],
+                    text=str(counts[i]),
+                    yshift=15,
+                    xanchor='center',
+                    yanchor='bottom',
+                    showarrow=False,
+                    font=dict(color="white", size=14)
+                )
+
+        hist_fig.update_layout(
+            title='Distribution of Final Prices',
+            xaxis_title='Final Price (₹)',
+            yaxis_title='Frequency',
+            bargap=0.1,
+            template="plotly_dark",
+            margin=dict(l=40, r=40, t=60, b=40),
+            font=dict(size=12)
+        )
+        st.plotly_chart(hist_fig, use_container_width=True)
+
+        st.markdown("---")
+        st.header("Explore Simulated Data")
+
+        st.markdown("#### Final Prices of All Simulated Paths")
+        df_final_prices = pd.DataFrame(final_prices, columns=['Final Price (₹)'])
+        df_final_prices.index.name = 'Path Index'
+        st.dataframe(df_final_prices.style.format({"Final Price (₹)": "₹{:.2f}"}), use_container_width=True, height=250)
+
+        st.markdown("---")
+        st.header("Download Simulation Data")
+        df_sim_paths = pd.DataFrame(all_sim_paths_array, columns=[f'Sim_{i+1}' for i in range(num_simulations)])
+        df_sim_paths.index.name = 'Day'
+        csv_data = df_sim_paths.to_csv(index=True).encode('utf-8')
+        st.download_button(
+            label="Download All Simulated Paths as CSV",
+            data=csv_data,
+            file_name="monte_carlo_stock_paths.csv",
+            mime="text/csv",
+            help="Download a CSV file containing all simulated stock price paths."
+        )
+else:
+    st.info("Adjust the parameters above and click 'Run Simulation' to see the results.")
+
+st.markdown("---")
+st.header("About the Model")
+st.info(
+    """
+    This simulation uses **Geometric Brownian Motion (GBM)** to model stock prices.
+    The formula is:
+    $S_{t+\Delta t} = S_t \\cdot e^{(\\mu - \\frac{1}{2}\\sigma^2)\\Delta t + \\sigma\\sqrt{\\Delta t}Z}$
+
+    **Assumptions of GBM:**
+    1. Stock prices follow a random walk.
+    2. Log returns are normally distributed.
+    3. Volatility is constant over time.
+    4. No dividends or transaction costs.
+    """
+)
+st.caption("Built with Streamlit and Plotly")
