@@ -3,4 +3,5 @@ plotly
 plotly.express
 seaborn
 matplotlib
-openpyxl
+numpy
+time
