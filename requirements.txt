@@ -1,7 +1,5 @@
 streamlit
 plotly
 plotly.express
-seaborn
-matplotlib
 numpy
-time
+pandas
